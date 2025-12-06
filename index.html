@@ -61,6 +61,18 @@
         .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 200ms, transform 200ms; }
         .modal-exit { opacity: 1; transform: scale(1); }
         .modal-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 200ms, transform 200ms; }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -68,30 +80,31 @@
     <div id="app-container" class="card w-full max-w-sm mx-auto p-6 rounded-xl text-center transition-all duration-100 relative">
 
         <!-- Settings Button -->
-        <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
-            <i class="ph ph-gear text-2xl"></i>
+        <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors" aria-label="Open settings" aria-controls="settings-modal" aria-haspopup="dialog" aria-expanded="false" type="button">
+            <i class="ph ph-gear text-2xl" aria-hidden="true"></i>
         </button>
 
         <!-- Header -->
         <h1 class="text-3xl font-bold mb-2 text-[#58a6ff]">Note Streak</h1>
-        <p class="text-sm text-gray-400 mb-6">Play the note shown on the staff!</p>
+        <p class="text-sm text-gray-400 mb-4">Play the note shown on the staff!</p>
 
         <!-- MIDI Status -->
-        <div id="midi-status" class="text-xs font-mono p-2 mb-6 rounded-lg bg-gray-700/50 border border-gray-600 overflow-hidden text-ellipsis">
+        <div id="midi-status" class="text-xs font-mono p-2 mb-2 rounded-lg bg-gray-700/50 border border-gray-600 overflow-hidden text-ellipsis" role="status" aria-live="polite">
             <span class="text-yellow-400">Connecting to MIDI...</span>
         </div>
+        <button id="retry-midi" type="button" class="text-xs font-semibold text-[#58a6ff] hover:text-white underline-offset-2 hover:underline mb-6">Retry Connection</button>
 
         <!-- Target Note Display - Now a Canvas for Sheet Music -->
         <div class="mb-8">
-            <p id="instruction-text" class="text-lg font-semibold text-gray-300 mb-2">Next Note:</p>
+            <p id="instruction-text" class="text-lg font-semibold text-gray-300 mb-2" role="status" aria-live="polite">Next Note:</p>
             <!-- Canvas Wrapper for VexFlow rendering -->
             <div class="h-40 flex items-center justify-center bg-white/5 rounded-lg border-2 border-transparent overflow-hidden" id="canvas-wrapper">
-                <div id="note-canvas" class="flex justify-center items-center w-11/12"></div>
+                <div id="note-canvas" class="flex justify-center items-center w-11/12" role="img" aria-label="Target note on treble clef staff"></div>
             </div>
             
             <!-- Toggle Note Name -->
             <div class="flex justify-center items-center mt-3 space-x-2">
-                <input type="checkbox" id="show-note-name" class="accent-[#58a6ff] h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer" checked>
+                <input type="checkbox" id="show-note-name" class="accent-[#58a6ff] h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer" checked aria-checked="true">
                 <label for="show-note-name" class="text-xs text-gray-400 select-none cursor-pointer">Show Note Name</label>
             </div>
         </div>
@@ -99,25 +112,25 @@
         <!-- Streak Counter -->
         <div class="mb-6">
             <p class="text-lg font-semibold text-gray-300 mb-2">Current Streak:</p>
-            <div id="streak-count" class="text-5xl font-extrabold text-[#fae100]">
+            <div id="streak-count" class="text-5xl font-extrabold text-[#fae100]" aria-live="polite">
                 0
             </div>
         </div>
 
         <!-- Last Key Pressed -->
         <div class="text-xs text-gray-500 pt-4 border-t border-gray-700">
-            <p id="last-note-info">Last Note: -</p>
+            <p id="last-note-info" role="status" aria-live="polite">Last Note: -</p>
         </div>
         
-        <p class="text-[10px] text-gray-600 mt-2">Click anywhere to enable audio if silent</p>
+        <p class="text-[10px] text-gray-600 mt-2">Tap anywhere to enable audio if silent</p>
 
         <!-- Settings Modal -->
-        <div id="settings-modal" class="hidden absolute inset-0 bg-[#0d1117]/95 backdrop-blur-sm z-50 rounded-xl flex flex-col items-center justify-center p-6">
+        <div id="settings-modal" class="hidden absolute inset-0 bg-[#0d1117]/95 backdrop-blur-sm z-50 rounded-xl flex flex-col items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1" aria-hidden="true">
             <div class="w-full h-full flex flex-col">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white">Settings</h2>
-                    <button id="close-settings" class="text-gray-400 hover:text-white">
-                        <i class="ph ph-x text-2xl"></i>
+                    <h2 id="settings-title" class="text-xl font-bold text-white">Settings</h2>
+                    <button id="close-settings" class="text-gray-400 hover:text-white" aria-label="Close settings" type="button">
+                        <i class="ph ph-x text-2xl" aria-hidden="true"></i>
                     </button>
                 </div>
 
@@ -126,7 +139,7 @@
                     <!-- Game Mode Selection -->
                     <div class="mb-6 text-left">
                         <p class="text-sm text-gray-400 mb-2">Game Mode:</p>
-                        <select id="mode-select" class="w-full bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-[#58a6ff] focus:border-[#58a6ff] block p-2.5">
+                        <select id="mode-select" class="w-full bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-[#58a6ff] focus:border-[#58a6ff] block p-2.5" aria-label="Select game mode">
                             <option value="random">Random Drill (Default)</option>
                             <!-- Songs will be injected here -->
                         </select>
@@ -135,13 +148,14 @@
                     <!-- Note Selection (Only for Random Mode) -->
                     <div id="random-settings-panel">
                         <p class="text-sm text-gray-400 mb-4 text-left">Select Active Notes:</p>
-                        <div id="notes-grid" class="grid grid-cols-2 gap-3 text-left">
+                        <div id="notes-grid" class="grid grid-cols-2 gap-3 text-left" role="group" aria-label="Selectable notes">
                             <!-- Checkboxes generated by JS -->
                         </div>
+                        <p id="settings-feedback" class="text-xs text-red-400 mt-2 min-h-[1rem]" role="status" aria-live="assertive"></p>
                         
                         <div class="mt-4 pt-4 border-t border-gray-700 w-full flex justify-between">
-                             <button id="select-all-btn" class="text-xs text-[#58a6ff] hover:underline">Select All</button>
-                             <button id="clear-all-btn" class="text-xs text-gray-400 hover:text-white hover:underline">Clear All</button>
+                             <button id="select-all-btn" class="text-xs text-[#58a6ff] hover:underline" type="button">Select All</button>
+                             <button id="clear-all-btn" class="text-xs text-gray-400 hover:text-white hover:underline" type="button">Clear All</button>
                         </div>
                     </div>
                 </div>
@@ -150,537 +164,6 @@
 
     </div>
 
-    <script>
-        // Use an IIFE for scope management and initialization
-        (function () {
-            // Import VexFlow objects from the global scope
-            // FIX: Added Renderer to imports so we can access Backends.SVG
-            const { Factory, EasyScore, System, Renderer } = Vex.Flow;
-
-            // --- DOM Elements ---
-            const appContainer = document.getElementById('app-container');
-            const midiStatusEl = document.getElementById('midi-status');
-            const streakCountEl = document.getElementById('streak-count');
-            const lastNoteInfoEl = document.getElementById('last-note-info');
-            const instructionText = document.getElementById('instruction-text');
-            const noteOutputDiv = document.getElementById('note-canvas'); 
-            const canvasWrapper = document.getElementById('canvas-wrapper');
-            const showNoteNameCheckbox = document.getElementById('show-note-name');
-            const settingsBtn = document.getElementById('settings-btn');
-            const settingsModal = document.getElementById('settings-modal');
-            const closeSettingsBtn = document.getElementById('close-settings');
-            const notesGrid = document.getElementById('notes-grid');
-            const selectAllBtn = document.getElementById('select-all-btn');
-            const clearAllBtn = document.getElementById('clear-all-btn');
-            const modeSelect = document.getElementById('mode-select');
-            const randomSettingsPanel = document.getElementById('random-settings-panel');
-            
-            // Set explicit dimensions for the SVG
-            const height = 150;
-
-            // --- Audio Context Setup ---
-            let audioCtx = null;
-
-            function initAudio() {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            }
-
-            window.addEventListener('click', initAudio, { once: true });
-            window.addEventListener('keydown', initAudio, { once: true });
-
-            function playNoteSound(midiNote) {
-                if (!audioCtx) initAudio();
-                if (!audioCtx) return;
-
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-
-                const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
-                
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-                const now = audioCtx.currentTime;
-                const duration = 0.3;
-
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                osc.start(now);
-                osc.stop(now + duration);
-            }
-
-            // --- SONG LIBRARY & PARSING ---
-
-            const songLibrary = [
-                {
-                    title: "Twinkle Twinkle Little Star",
-                    notes: "C4/q, C4, G4, G4, A4, A4, G4/h, F4/q, F4, E4, E4, D4, D4, C4/h",
-                    timeSignature: "4/4"
-                },
-                {
-                    title: "Mary Had a Little Lamb",
-                    notes: "E4/q, D4, C4, D4, E4, E4, E4/h, D4/q, D4, D4/h, E4/q, G4, G4/h",
-                    timeSignature: "4/4"
-                },
-                {
-                    title: "Ode to Joy",
-                    notes: "E4/q, E4, F4, G4, G4, F4, E4, D4, C4, C4, D4, E4, E4/q., D4/8, D4/h",
-                    timeSignature: "4/4"
-                },
-                {
-                    title: "Frere Jacques",
-                    notes: "C4/q, D4, E4, C4, C4, D4, E4, C4, E4, F4, G4/h, E4/q, F4, G4/h",
-                    timeSignature: "4/4"
-                },
-                {
-                    title: "Hot Cross Buns",
-                    notes: "E4/q, D4, C4/h, E4/q, D4, C4/h, C4/8, C4, C4, C4, D4, D4, D4, D4, E4/q, D4, C4/h",
-                    timeSignature: "4/4"
-                }
-            ];
-
-            // Helper to parse note name (e.g. "C#4") to MIDI number
-            function parseNoteToMidi(noteName) {
-                const noteRegex = /^([A-G])([#b]?)([0-9])$/;
-                const match = noteName.match(noteRegex);
-                if (!match) return 60; // fallback
-
-                const noteChar = match[1];
-                const accidental = match[2];
-                const octave = parseInt(match[3]);
-
-                const baseMap = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
-                let midi = baseMap[noteChar] + (octave + 1) * 12;
-
-                if (accidental === '#') midi += 1;
-                if (accidental === 'b') midi -= 1;
-
-                return midi;
-            }
-
-            // Convert EasyScore string into array of MIDI numbers
-            function parseSongToMidiSequence(notesString) {
-                // Split by comma or space, remove empty entries
-                const tokens = notesString.split(/[\s,]+/).filter(t => t);
-                return tokens.map(token => {
-                    // Remove duration info (e.g., "/q", "/h", "/8")
-                    const cleanName = token.split('/')[0];
-                    return parseNoteToMidi(cleanName);
-                });
-            }
-
-            // --- Game State & Settings ---
-            let currentMode = 'random'; // 'random' or 'song'
-            let currentSongIndex = -1; // Index in songLibrary
-            let songQueue = []; // Array of MIDI numbers for current song
-            let songProgressIndex = 0; // Current position in songQueue
-
-            let currentStreak = 0;
-            let penaltyHits = 0;
-            
-            // Define the pool of all possible notes for Random Mode
-            const availableNotesPool = [
-                { midi: 60, label: 'C4' },
-                { midi: 62, label: 'D4' },
-                { midi: 64, label: 'E4' },
-                { midi: 65, label: 'F4' },
-                { midi: 67, label: 'G4' },
-                { midi: 69, label: 'A4' },
-                { midi: 71, label: 'B4' },
-                { midi: 72, label: 'C5' }
-            ];
-
-            // Currently active notes (starts with all)
-            let activeNotes = availableNotesPool.map(n => n.midi);
-            let targetNote = 60; // Default start
-
-            // --- Helper UI Functions ---
-            function updateInstructionText() {
-                if (penaltyHits > 0) {
-                    instructionText.textContent = `Drill: Play ${penaltyHits} more time${penaltyHits === 1 ? '' : 's'}!`;
-                    instructionText.classList.add('text-[#ff5874]');
-                    instructionText.classList.remove('text-gray-300');
-                    instructionText.classList.remove('text-[#58a6ff]');
-                } else if (currentMode === 'song') {
-                    instructionText.textContent = `Song: ${songLibrary[currentSongIndex].title}`;
-                    instructionText.classList.remove('text-[#ff5874]');
-                    instructionText.classList.add('text-[#58a6ff]'); // Blue for song mode
-                    instructionText.classList.remove('text-gray-300');
-                } else {
-                    instructionText.textContent = "Next Note:";
-                    instructionText.classList.remove('text-[#ff5874]');
-                    instructionText.classList.remove('text-[#58a6ff]');
-                    instructionText.classList.add('text-gray-300');
-                }
-            }
-
-            // --- Settings Logic ---
-
-            function toggleSettings() {
-                if (settingsModal.classList.contains('hidden')) {
-                    settingsModal.classList.remove('hidden');
-                    settingsModal.classList.add('flex', 'modal-enter');
-                    setTimeout(() => settingsModal.classList.remove('modal-enter', 'modal-enter-active'), 200);
-                } else {
-                    settingsModal.classList.add('hidden');
-                    settingsModal.classList.remove('flex');
-                }
-            }
-
-            // Populate Song Select Dropdown
-            function initSettingsUI() {
-                songLibrary.forEach((song, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = song.title;
-                    modeSelect.appendChild(option);
-                });
-
-                modeSelect.addEventListener('change', (e) => {
-                    const val = e.target.value;
-                    if (val === 'random') {
-                        currentMode = 'random';
-                        randomSettingsPanel.classList.remove('hidden');
-                        targetNote = getNextRandomNote(null);
-                        updateInstructionText();
-                        updateTargetNoteUI();
-                    } else {
-                        currentMode = 'song';
-                        currentSongIndex = parseInt(val);
-                        randomSettingsPanel.classList.add('hidden');
-                        
-                        // Load Song
-                        const songData = songLibrary[currentSongIndex];
-                        songQueue = parseSongToMidiSequence(songData.notes);
-                        songProgressIndex = 0;
-                        targetNote = songQueue[0];
-                        
-                        penaltyHits = 0;
-                        currentStreak = 0;
-                        updateStreakUI(true); // reset visuals
-                        updateInstructionText();
-                        updateTargetNoteUI();
-                    }
-                });
-            }
-
-            function renderSettingsGrid() {
-                notesGrid.innerHTML = '';
-                availableNotesPool.forEach(note => {
-                    const isChecked = activeNotes.includes(note.midi);
-                    
-                    const label = document.createElement('label');
-                    label.className = "flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white/5";
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = "accent-[#58a6ff] h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer";
-                    checkbox.checked = isChecked;
-                    checkbox.value = note.midi;
-                    
-                    checkbox.addEventListener('change', (e) => {
-                        const midiVal = parseInt(e.target.value);
-                        if (e.target.checked) {
-                            if (!activeNotes.includes(midiVal)) {
-                                activeNotes.push(midiVal);
-                                activeNotes.sort((a, b) => a - b);
-                            }
-                        } else {
-                            if (activeNotes.length <= 1) {
-                                e.target.checked = true;
-                                alert("You must have at least one note active!");
-                                return;
-                            }
-                            activeNotes = activeNotes.filter(n => n !== midiVal);
-                        }
-                        
-                        // Only update if in random mode
-                        if (currentMode === 'random' && !activeNotes.includes(targetNote)) {
-                            penaltyHits = 0;
-                            updateInstructionText();
-                            targetNote = getNextRandomNote(null);
-                            updateTargetNoteUI();
-                        }
-                    });
-
-                    const span = document.createElement('span');
-                    span.className = "text-sm text-gray-300";
-                    span.textContent = note.label;
-
-                    label.appendChild(checkbox);
-                    label.appendChild(span);
-                    notesGrid.appendChild(label);
-                });
-            }
-
-            settingsBtn.addEventListener('click', toggleSettings);
-            closeSettingsBtn.addEventListener('click', toggleSettings);
-
-            selectAllBtn.addEventListener('click', () => {
-                activeNotes = availableNotesPool.map(n => n.midi);
-                renderSettingsGrid();
-            });
-
-            clearAllBtn.addEventListener('click', () => {
-                activeNotes = [60];
-                renderSettingsGrid();
-                if (currentMode === 'random' && !activeNotes.includes(targetNote)) {
-                    penaltyHits = 0;
-                    updateInstructionText();
-                    targetNote = 60;
-                    updateTargetNoteUI();
-                }
-            });
-
-            // --- Game Logic ---
-
-            function getNextRandomNote(currentNote) {
-                if (activeNotes.length === 0) return 60;
-                if (activeNotes.length === 1) return activeNotes[0];
-                
-                let nextNote;
-                do {
-                    const randomIndex = Math.floor(Math.random() * activeNotes.length);
-                    nextNote = activeNotes[randomIndex];
-                } while (nextNote === currentNote && activeNotes.length > 1);
-                
-                return nextNote;
-            }
-
-            function advanceSong() {
-                songProgressIndex++;
-                if (songProgressIndex >= songQueue.length) {
-                    // Song Complete!
-                    appContainer.classList.add('feedback-complete');
-                    setTimeout(() => appContainer.classList.remove('feedback-complete'), 500);
-                    songProgressIndex = 0; // Loop song
-                }
-                return songQueue[songProgressIndex];
-            }
-            
-            // --- VexFlow Utilities ---
-            
-            const easyScoreNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-            function getEasyScoreNote(noteNumber) {
-                const octave = Math.floor(noteNumber / 12) - 1;
-                const note = easyScoreNames[noteNumber % 12];
-                return `${note}${octave}`;
-            }
-            
-            function renderNoteOnStaff(noteNumber, isCorrect) {
-                try {
-                    noteOutputDiv.innerHTML = '';
-                    
-                    // Calculate width based on container
-                    const width = canvasWrapper.clientWidth;
-                    
-                    // FIX: Create Factory with explicit SVG backend to avoid invisible canvas issues
-                    const vf = new Factory({
-                        renderer: {
-                            elementId: 'note-canvas', 
-                            width: width, 
-                            height: height,
-                            backend: Renderer.Backends.SVG // Force SVG
-                        }
-                    });
-
-                    // We use System to handle the layout, but we configure the voice's time signature
-                    // to match the single note (1/4).
-                    
-                    const score = vf.EasyScore();
-                    const system = vf.System();
-                    const context = vf.getContext();
-                    const foreColor = "#e6edf3"; 
-                    context.setFillStyle(foreColor);
-                    context.setStrokeStyle(foreColor);
-
-                    const noteName = getEasyScoreNote(noteNumber);
-                    const noteString = `${noteName}/q`;
-
-                    // Generate notes
-                    const notes = score.notes(noteString);
-                    
-                    // Styling
-                    const targetStaveNote = notes[0];
-                    if (isCorrect) {
-                        targetStaveNote.setStyle({ fillStyle: '#00ff9c', strokeStyle: '#00ff9c' });
-                    } else {
-                        targetStaveNote.setStyle({ fillStyle: foreColor, strokeStyle: foreColor });
-                    }
-
-                    // Create Voice with explicit 1/4 time signature
-                    const voice = score.voice(notes, {time: '1/4'});
-
-                    // REVERTED to Manual Stave Creation to force full width
-                    // The 'system' approach sometimes shrinks the stave to fit content.
-                    const stave = vf.Stave({x: 0, y: 10, width: width}); 
-                    stave.addClef('treble');
-                    stave.setContext(context).draw();
-
-                    // Format and Draw Voice onto the manual stave
-                    vf.Formatter().joinVoices([voice]).formatToStave([voice], stave);
-                    voice.draw(context, stave);
-                    
-                    if (showNoteNameCheckbox.checked) {
-                        context.setFont("Inter", 12, "bold");
-                        context.setFillStyle(isCorrect ? '#00ff9c' : '#fae100');
-                        context.fillText(noteName, width / 2 - 10, 140);
-                    }
-                } catch (error) {
-                    console.error("[VexFlow] Error rendering note on staff:", error);
-                }
-            }
-
-            function updateTargetNoteUI() {
-                renderNoteOnStaff(targetNote, true);
-            }
-
-            function updateStreakUI(isCorrect) {
-                streakCountEl.textContent = currentStreak;
-                appContainer.classList.remove('feedback-correct', 'feedback-incorrect');
-                void appContainer.offsetWidth;
-                appContainer.classList.add(isCorrect ? 'feedback-correct' : 'feedback-incorrect');
-                canvasWrapper.classList.remove('border-green-500', 'border-red-500', 'border-transparent');
-                canvasWrapper.classList.add(isCorrect ? 'border-green-500' : 'border-red-500');
-            }
-            
-            showNoteNameCheckbox.addEventListener('change', () => {
-                updateTargetNoteUI();
-            });
-
-            function handleIncomingNote(noteNumber, velocity) {
-                if (velocity === 0) return;
-                playNoteSound(noteNumber);
-
-                const noteNameText = `${getNoteName(noteNumber)} (${noteNumber})`;
-                lastNoteInfoEl.textContent = `Last Note: ${noteNameText}`;
-
-                if (noteNumber === targetNote) {
-                    // CORRECT HIT
-                    currentStreak++;
-                    updateStreakUI(true);
-
-                    if (penaltyHits > 0) {
-                        penaltyHits--;
-                        if (penaltyHits === 0) {
-                            updateInstructionText();
-                            // Logic Split: Random vs Song
-                            if (currentMode === 'random') {
-                                targetNote = getNextRandomNote(targetNote);
-                            } else {
-                                targetNote = advanceSong();
-                            }
-                            setTimeout(updateTargetNoteUI, 100); 
-                        } else {
-                            updateInstructionText();
-                        }
-                    } else {
-                        // Normal mode Logic Split
-                        if (currentMode === 'random') {
-                            targetNote = getNextRandomNote(targetNote);
-                        } else {
-                            targetNote = advanceSong();
-                        }
-                        setTimeout(updateTargetNoteUI, 100); 
-                    }
-
-                } else {
-                    // INCORRECT HIT
-                    if (currentStreak > 0) {
-                        currentStreak = 0;
-                        updateStreakUI(false);
-                    }
-                    
-                    // Activate Penalty Mode (for both modes)
-                    penaltyHits = 3;
-                    updateInstructionText();
-                    
-                    renderNoteOnStaff(targetNote, false); 
-                }
-            }
-            
-            const basicNoteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-            function getNoteName(noteNumber) {
-                const octave = Math.floor(noteNumber / 12) - 1;
-                const note = basicNoteNames[noteNumber % 12];
-                return `${note}${octave}`;
-            }
-
-            // --- MIDI Setup ---
-
-            function onMIDIMessage(event) {
-                const [status, data1, data2] = event.data;
-                if (status === 254 || status === 248) return;
-
-                if (status >= 144 && status <= 159) {
-                    const noteNumber = data1;
-                    const velocity = data2;
-                    handleIncomingNote(noteNumber, velocity);
-                }
-            }
-
-            function onMIDISuccess(midiAccess) {
-                midiStatusEl.classList.remove('text-yellow-400', 'bg-gray-700/50', 'border-gray-600');
-                midiStatusEl.classList.add('text-green-400', 'bg-green-700/20', 'border-green-600');
-
-                const inputs = midiAccess.inputs.values();
-                let portFound = false;
-                midiStatusEl.innerHTML = "";
-                
-                for (let input of inputs) {
-                    const deviceBadge = document.createElement('div');
-                    deviceBadge.className = "mb-1";
-                    deviceBadge.innerHTML = `Connected: <span class="font-bold">${input.name}</span>`;
-                    midiStatusEl.appendChild(deviceBadge);
-                    input.onmidimessage = onMIDIMessage;
-                    portFound = true;
-                }
-
-                if (!portFound) {
-                    midiStatusEl.innerHTML = `<span class="font-bold">No MIDI device found.</span> Please connect your keyboard and refresh.`;
-                    midiStatusEl.classList.remove('text-green-400', 'bg-green-700/20', 'border-green-600');
-                    midiStatusEl.classList.add('text-red-400', 'bg-red-700/20', 'border-red-600');
-                }
-            }
-
-            function onMIDIFailure(e) {
-                midiStatusEl.innerHTML = `MIDI Connection Failed: <span class="font-bold">${e.message || "Access denied"}</span>`;
-                midiStatusEl.classList.remove('text-yellow-400', 'bg-gray-700/50', 'border-gray-600');
-                midiStatusEl.classList.add('text-red-400', 'bg-red-700/20', 'border-red-600');
-            }
-
-            // Main initialization function
-            function init() {
-                initSettingsUI(); // NEW
-                renderSettingsGrid();
-                
-                targetNote = getNextRandomNote(null);
-                
-                updateTargetNoteUI();
-                updateStreakUI(true);
-
-                if (navigator.requestMIDIAccess) {
-                    navigator.requestMIDIAccess()
-                        .then(onMIDISuccess)
-                        .catch(onMIDIFailure);
-                } else {
-                    onMIDIFailure({ message: "Your browser does not support the Web MIDI API." });
-                }
-            }
-
-            window.onload = init;
-
-        })();
-    </script>
+    <script type="module" src="./main.js"></script>
 </body>
 </html>

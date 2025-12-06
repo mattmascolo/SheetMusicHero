@@ -1,0 +1,19 @@
+{
+  "name": "midi-note-trainer",
+  "version": "1.0.0",
+  "description": "Web MIDI sight reading trainer with sheet music rendering.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [
+    "midi",
+    "music",
+    "trainer"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  }
+}
