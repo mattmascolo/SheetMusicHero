@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIDI Note Streak Trainer (Sheet Music)</title>
+    <title>Sheet Music Trainer</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load VexFlow for rendering musical notation -->
@@ -21,18 +21,9 @@
             <i class="ph ph-gear text-2xl"></i>
         </button>
 
-        <!-- Header -->
-        <h1 class="text-3xl font-bold mb-2 text-[#58a6ff]">Note Streak</h1>
-        <p class="text-sm text-gray-400 mb-6">Play the note shown on the staff!</p>
-
-        <!-- MIDI Status -->
-        <div id="midi-status" class="text-xs font-mono p-2 mb-6 rounded-lg bg-gray-700/50 border border-gray-600 overflow-hidden text-ellipsis">
-            <span class="text-yellow-400">Connecting to MIDI...</span>
-        </div>
-
         <!-- Target Note Display - Now a Canvas for Sheet Music -->
         <div class="mb-8">
-            <p id="instruction-text" class="text-lg font-semibold text-gray-300 mb-2">Next Note:</p>
+            <p id="instruction-text" class="text-lg font-semibold text-gray-300 mb-2"></p>
             <!-- Canvas Wrapper for VexFlow rendering -->
             <div class="h-40 flex items-center justify-center bg-white/5 rounded-lg border-2 border-transparent overflow-hidden" id="canvas-wrapper">
                 <div id="note-canvas" class="flex justify-center items-center w-11/12"></div>
@@ -45,16 +36,33 @@
             </div>
         </div>
 
+        <!-- Time Trial Panel -->
+        <div id="time-trial-panel" class="hidden mb-6 text-left bg-white/5 border border-gray-700 rounded-lg p-4 space-y-3">
+            <div class="flex justify-between text-sm text-gray-400">
+                <p>Time Left: <span id="time-trial-timer" class="font-semibold text-white">30s</span></p>
+                <p>Accuracy: <span id="time-trial-accuracy" class="font-semibold text-white">-</span></p>
+            </div>
+            <button id="time-trial-start" class="w-full py-2 rounded-md text-white font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed btn-time-trial btn-time-trial-start">
+                Start 30s Run
+            </button>
+            <p id="time-trial-summary" class="text-xs text-gray-400 hidden">Complete a run to see your stats.</p>
+        </div>
+
         <!-- Streak Counter -->
-        <div class="mb-6">
+        <div id="streak-panel" class="mb-6">
             <p class="text-lg font-semibold text-gray-300 mb-2">Current Streak:</p>
             <div id="streak-count" class="text-5xl font-extrabold text-[#fae100]">
                 0
             </div>
         </div>
 
+        <!-- MIDI Status -->
+        <div id="midi-status" class="text-xs font-mono p-2 mb-3 rounded-lg bg-gray-700/50 border border-gray-600 overflow-hidden text-ellipsis">
+            <span class="text-yellow-400">Connecting to MIDI...</span>
+        </div>
+
         <!-- Last Key Pressed -->
-        <div class="text-xs text-gray-500 pt-4 border-t border-gray-700">
+        <div class="text-xs text-gray-500 pt-1">
             <p id="last-note-info">Last Note: -</p>
         </div>
         
@@ -81,7 +89,7 @@
                         </select>
                     </div>
 
-                    <!-- Note Selection (Only for Random Mode) -->
+                    <!-- Note Selection (Drill Modes) -->
                     <div id="random-settings-panel">
                         <div class="mb-4 text-left">
                             <p class="text-sm text-gray-400 mb-2">Scale Preset:</p>

@@ -22,6 +22,12 @@
     const scaleSelect = document.getElementById('scale-select');
     const modeSelect = document.getElementById('mode-select');
     const randomSettingsPanel = document.getElementById('random-settings-panel');
+    const streakPanel = document.getElementById('streak-panel');
+    const timeTrialPanel = document.getElementById('time-trial-panel');
+    const timeTrialTimerEl = document.getElementById('time-trial-timer');
+    const timeTrialAccuracyEl = document.getElementById('time-trial-accuracy');
+    const timeTrialStartBtn = document.getElementById('time-trial-start');
+    const timeTrialSummaryEl = document.getElementById('time-trial-summary');
     
     // Set explicit dimensions for the SVG
     const height = 150;
@@ -128,7 +134,7 @@
     }
 
     // --- Game State & Settings ---
-    let currentMode = 'random'; // 'random' or 'song'
+    let currentMode = 'time-trial'; // 'time-trial', 'random', or 'song'
     let currentSongIndex = -1; // Index in songLibrary
     let songQueue = []; // Array of MIDI numbers for current song
     let songProgressIndex = 0; // Current position in songQueue
@@ -196,8 +202,17 @@
     const NOTE_BATCH_SIZE = 8;
     let displayQueue = [];
     let batchCursor = 0;
+    const TIME_TRIAL_DURATION = 30;
+    let timeTrialActive = false;
+    let timeTrialTimerId = null;
+    let timeTrialTimeLeft = TIME_TRIAL_DURATION;
+    let timeTrialStats = { correct: 0, total: 0 };
 
     // --- Helper UI Functions ---
+    function isTimeTrialMode() {
+        return currentMode === 'time-trial';
+    }
+
     function updateInstructionText() {
         if (penaltyHits > 0) {
             instructionText.textContent = `Drill: Play ${penaltyHits} more time${penaltyHits === 1 ? '' : 's'}!`;
@@ -209,12 +224,149 @@
             instructionText.classList.remove('text-[#ff5874]');
             instructionText.classList.add('text-[#58a6ff]'); // Blue for song mode
             instructionText.classList.remove('text-gray-300');
+        } else if (isTimeTrialMode()) {
+            instructionText.textContent = timeTrialActive
+                ? "Time Trial: Keep going!"
+                : "Time Trial: Press Start to begin";
+            instructionText.classList.remove('text-[#ff5874]');
+            instructionText.classList.add('text-[#58a6ff]');
+            instructionText.classList.remove('text-gray-300');
         } else {
-            instructionText.textContent = "Next Note:";
+            instructionText.textContent = "Notes:";
             instructionText.classList.remove('text-[#ff5874]');
             instructionText.classList.remove('text-[#58a6ff]');
             instructionText.classList.add('text-gray-300');
         }
+    }
+
+    function stopTimeTrialTimer() {
+        if (timeTrialTimerId) {
+            clearInterval(timeTrialTimerId);
+            timeTrialTimerId = null;
+        }
+    }
+
+    function updateTimeTrialUI() {
+        if (!timeTrialPanel) return;
+        if (timeTrialTimerEl) {
+            timeTrialTimerEl.textContent = `${timeTrialTimeLeft}s`;
+        }
+        if (timeTrialAccuracyEl) {
+            if (timeTrialStats.total === 0) {
+                timeTrialAccuracyEl.textContent = '-';
+            } else {
+                const accuracy = Math.round((timeTrialStats.correct / timeTrialStats.total) * 100);
+                timeTrialAccuracyEl.textContent = `${accuracy}%`;
+            }
+        }
+    }
+
+    function resetTimeTrialState({ preserveSummary = false, buttonText = 'Start 30s Run', resetStats = true } = {}) {
+        stopTimeTrialTimer();
+        timeTrialActive = false;
+        if (resetStats) {
+            timeTrialStats = { correct: 0, total: 0 };
+            timeTrialTimeLeft = TIME_TRIAL_DURATION;
+        }
+        if (timeTrialStartBtn) {
+            timeTrialStartBtn.disabled = false;
+            setTimeTrialButtonAppearance(buttonText);
+        }
+        if (!preserveSummary && timeTrialSummaryEl) {
+            timeTrialSummaryEl.classList.add('hidden');
+        }
+        updateTimeTrialUI();
+    }
+
+    function showTimeTrialPanel(show) {
+        if (!timeTrialPanel) return;
+        timeTrialPanel.classList.toggle('hidden', !show);
+    }
+
+    function setStreakPanelVisibility(show) {
+        if (!streakPanel) return;
+        streakPanel.classList.toggle('hidden', !show);
+    }
+
+    function setTimeTrialButtonAppearance(label) {
+        if (!timeTrialStartBtn) return;
+        timeTrialStartBtn.textContent = label;
+        const normalized = label.toLowerCase();
+        const isStop = normalized.includes('stop');
+        timeTrialStartBtn.classList.toggle('btn-time-trial-stop', isStop);
+        timeTrialStartBtn.classList.toggle('btn-time-trial-start', !isStop);
+    }
+
+    function endTimeTrialRun({ cancelled = false } = {}) {
+        const wasActive = timeTrialActive;
+        const prevStats = { ...timeTrialStats };
+        stopTimeTrialTimer();
+        timeTrialActive = false;
+        if (!cancelled) {
+            timeTrialTimeLeft = 0;
+        }
+
+        if (timeTrialSummaryEl) {
+            let summaryText = '';
+            if (cancelled && (wasActive || prevStats.total > 0)) {
+                if (prevStats.total > 0) {
+                    const accuracy = Math.round((prevStats.correct / prevStats.total) * 100);
+                    const npm = Math.round((prevStats.correct * 60) / TIME_TRIAL_DURATION);
+                    summaryText = `Run stopped: ${prevStats.correct}/${prevStats.total} correct • ${accuracy}% accuracy • ${npm} npm`;
+                } else {
+                    summaryText = "Run stopped. No notes recorded.";
+                }
+            } else if (wasActive) {
+                if (prevStats.total > 0) {
+                    const accuracy = Math.round((prevStats.correct / prevStats.total) * 100);
+                    const npm = Math.round((prevStats.correct * 60) / TIME_TRIAL_DURATION);
+                    summaryText = `Time's up! ${prevStats.correct}/${prevStats.total} correct • ${accuracy}% accuracy • ${npm} npm`;
+                } else {
+                    summaryText = "Time's up! Try another run to record stats.";
+                }
+            }
+
+            if (summaryText) {
+                timeTrialSummaryEl.textContent = summaryText;
+                timeTrialSummaryEl.classList.remove('hidden');
+            }
+        }
+
+        const nextButtonText = wasActive && !cancelled ? 'Restart 30s Run' : 'Start 30s Run';
+        resetTimeTrialState({
+            preserveSummary: true,
+            buttonText: nextButtonText,
+            resetStats: false
+        });
+        updateInstructionText();
+    }
+
+    function startTimeTrialRun() {
+        if (!isTimeTrialMode() || timeTrialActive) return;
+        timeTrialStats = { correct: 0, total: 0 };
+        timeTrialTimeLeft = TIME_TRIAL_DURATION;
+        timeTrialActive = true;
+        currentStreak = 0;
+        updateStreakUI(true);
+        initializeRandomBatch({ resetEngine: true });
+        updateTargetNoteUI();
+        if (timeTrialStartBtn) {
+            timeTrialStartBtn.disabled = false;
+            setTimeTrialButtonAppearance('Stop Run');
+        }
+        if (timeTrialSummaryEl) {
+            timeTrialSummaryEl.classList.add('hidden');
+        }
+        updateTimeTrialUI();
+        updateInstructionText();
+        stopTimeTrialTimer();
+        timeTrialTimerId = setInterval(() => {
+            timeTrialTimeLeft = Math.max(0, timeTrialTimeLeft - 1);
+            updateTimeTrialUI();
+            if (timeTrialTimeLeft === 0) {
+                endTimeTrialRun();
+            }
+        }, 1000);
     }
 
     // --- Note Batch Helpers ---
@@ -285,20 +437,20 @@
 
     function advanceBatchCursor() {
         if (!displayQueue.length) {
-            if (currentMode === 'random') {
-                initializeRandomBatch({ resetEngine: false });
-            } else {
+            if (currentMode === 'song') {
                 initializeSongBatch();
+            } else {
+                initializeRandomBatch({ resetEngine: false });
             }
             return;
         }
         batchCursor++;
         if (batchCursor >= displayQueue.length) {
-            if (currentMode === 'random') {
+            if (currentMode === 'song') {
+                initializeSongBatch();
+            } else {
                 const seed = displayQueue.length ? displayQueue[displayQueue.length - 1] : null;
                 initializeRandomBatch({ resetEngine: false, seed });
-            } else {
-                initializeSongBatch();
             }
         } else {
             setTargetFromBatch();
@@ -320,6 +472,11 @@
 
     // Populate Song Select Dropdown
     function initSettingsUI() {
+        const timeTrialOption = document.createElement('option');
+        timeTrialOption.value = 'time-trial';
+        timeTrialOption.textContent = 'Time Trial (30s)';
+        modeSelect.appendChild(timeTrialOption);
+
         songLibrary.forEach((song, index) => {
             const option = document.createElement('option');
             option.value = index;
@@ -333,6 +490,21 @@
             if (val === 'random') {
                 currentMode = 'random';
                 randomSettingsPanel.classList.remove('hidden');
+                setStreakPanelVisibility(true);
+                showTimeTrialPanel(false);
+                resetTimeTrialState();
+                initializeRandomBatch();
+                penaltyHits = 0;
+                currentStreak = 0;
+                updateStreakUI(true);
+                updateInstructionText();
+                updateTargetNoteUI();
+            } else if (val === 'time-trial') {
+                currentMode = 'time-trial';
+                randomSettingsPanel.classList.remove('hidden');
+                setStreakPanelVisibility(false);
+                showTimeTrialPanel(true);
+                resetTimeTrialState();
                 initializeRandomBatch();
                 penaltyHits = 0;
                 currentStreak = 0;
@@ -341,8 +513,11 @@
                 updateTargetNoteUI();
             } else {
                 currentMode = 'song';
-                currentSongIndex = parseInt(val);
+                currentSongIndex = parseInt(val, 10);
                 randomSettingsPanel.classList.add('hidden');
+                setStreakPanelVisibility(true);
+                showTimeTrialPanel(false);
+                resetTimeTrialState();
                 
                 // Load Song
                 const songData = songLibrary[currentSongIndex];
@@ -357,6 +532,11 @@
                 updateTargetNoteUI();
             }
         });
+
+        if (modeSelect) {
+            modeSelect.value = currentMode;
+            modeSelect.dispatchEvent(new Event('change'));
+        }
     }
 
     function renderSettingsGrid() {
@@ -426,7 +606,7 @@
 
     function syncTargetAfterPoolChange() {
         resetMelodicEngine();
-        if (currentMode === 'random') {
+        if (currentMode === 'random' || isTimeTrialMode()) {
             penaltyHits = 0;
             updateInstructionText();
             initializeRandomBatch({ resetEngine: true });
@@ -731,12 +911,46 @@
         renderBatch(getHighlightMode());
     });
 
+    function handleTimeTrialButtonClick() {
+        if (timeTrialActive) {
+            endTimeTrialRun({ cancelled: true });
+        } else {
+            startTimeTrialRun();
+        }
+    }
+
+    if (timeTrialStartBtn) {
+        timeTrialStartBtn.addEventListener('click', handleTimeTrialButtonClick);
+    }
+
+    function handleTimeTrialNote(noteNumber) {
+        if (!timeTrialActive) return;
+        timeTrialStats.total++;
+        const isCorrect = noteNumber === targetNote;
+        if (isCorrect) {
+            timeTrialStats.correct++;
+            currentStreak++;
+            updateStreakUI(true);
+            advanceBatchCursor();
+            setTimeout(() => renderBatch('highlight'), 100);
+        } else {
+            currentStreak = 0;
+            updateStreakUI(false);
+        }
+        updateTimeTrialUI();
+    }
+
     function handleIncomingNote(noteNumber, velocity) {
         if (velocity === 0) return;
         playNoteSound(noteNumber);
 
         const noteNameText = `${getNoteName(noteNumber)} (${noteNumber})`;
         lastNoteInfoEl.textContent = `Last Note: ${noteNameText}`;
+
+        if (isTimeTrialMode()) {
+            handleTimeTrialNote(noteNumber);
+            return;
+        }
 
         if (noteNumber === targetNote) {
             // CORRECT HIT
@@ -833,11 +1047,15 @@
     function init() {
         initSettingsUI(); // NEW
         renderSettingsGrid();
-        
-        initializeRandomBatch();
-        
-        updateTargetNoteUI();
-        updateStreakUI(true);
+        if (!modeSelect) {
+            resetTimeTrialState();
+            showTimeTrialPanel(true);
+            setStreakPanelVisibility(false);
+            initializeRandomBatch();
+            updateTargetNoteUI();
+            updateStreakUI(true);
+            updateInstructionText();
+        }
 
         if (navigator.requestMIDIAccess) {
             navigator.requestMIDIAccess()

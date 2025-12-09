@@ -53,3 +53,27 @@ body {
 .modal-exit { opacity: 1; transform: scale(1); }
 .modal-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 200ms, transform 200ms; }
 
+.btn-time-trial {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-time-trial:active {
+    transform: scale(0.98);
+}
+
+.btn-time-trial-start {
+    background-color: #238636;
+}
+
+.btn-time-trial-start:hover {
+    background-color: #2ea043;
+}
+
+.btn-time-trial-stop {
+    background-color: #da3633;
+}
+
+.btn-time-trial-stop:hover {
+    background-color: #f85149;
+}
+
